@@ -3,6 +3,7 @@
 #include "../dsp/SynthHRTF.hpp"
 #include "../dsp/Biquad.hpp"
 #include "../dsp/FractionalDelay.hpp"
+#include <algorithm>
 
 namespace afx {
 
@@ -55,12 +56,25 @@ void GpuBinauralEngine::process(const float** inputs, int nsources, float* outL,
             pinnaR.s[k].a1 = sp.right.a1[k];
             pinnaR.s[k].a2 = sp.right.a2[k];
         }
-        dL.setDelay(std::fabs(sp.itdL)); dR.setDelay(std::fabs(sp.itdR));
+        float delayL = std::max(sp.itdL, 0.0f);
+        float delayR = std::max(sp.itdR, 0.0f);
+        bool useDelayL = delayL > 0.0f;
+        bool useDelayR = delayR > 0.0f;
+        dL.reset();
+        dR.reset();
+        if (useDelayL) {
+            dL.setDelay(delayL);
+        }
+        if (useDelayR) {
+            dR.setDelay(delayR);
+        }
         const float* x = inputs[s];
         for (int i=0;i<n;i++) {
             float in = x[i];
-            float xl = pinnaL.process(dL.process(in)) * sp.ildL_lin;
-            float xr = pinnaR.process(dR.process(in)) * sp.ildR_lin;
+            float delayedL = useDelayL ? dL.process(in) : in;
+            float delayedR = useDelayR ? dR.process(in) : in;
+            float xl = pinnaL.process(delayedL) * sp.ildL_lin;
+            float xr = pinnaR.process(delayedR) * sp.ildR_lin;
             outL[i] += xl;
             outR[i] += xr;
         }
