@@ -1,6 +1,7 @@
 
 #pragma once
 #include <vector>
+#include <algorithm>
 #include "../dsp/Biquad.hpp"
 #include "../dsp/FractionalDelay.hpp"
 #include "../dsp/SynthHRTF.hpp"
@@ -52,14 +53,26 @@ struct CpuBinauralEngine {
                 pinnaR[s].s[k].a1 = sp.right.a1[k];
                 pinnaR[s].s[k].a2 = sp.right.a2[k];
             }
-            // approssima ITD con Thiran per ear (qui usiamo lo stesso delay ma invertito di segno)
-            delaysL[s].setDelay(std::fabs(sp.itdL));
-            delaysR[s].setDelay(std::fabs(sp.itdR));
+            // approssima ITD con Thiran per ear mantenendo il segno del ritardo relativo
+            float delayL = std::max(sp.itdL, 0.0f);
+            float delayR = std::max(sp.itdR, 0.0f);
+            bool useDelayL = delayL > 0.0f;
+            bool useDelayR = delayR > 0.0f;
+            if (useDelayL) {
+                delaysL[s].setDelay(delayL);
+            } else {
+                delaysL[s].reset();
+            }
+            if (useDelayR) {
+                delaysR[s].setDelay(delayR);
+            } else {
+                delaysR[s].reset();
+            }
             const float* x = inputs[s];
             for (int i=0;i<n;i++) {
                 float in = x[i];
-                float xl = delaysL[s].process(in) * sp.ildL_lin;
-                float xr = delaysR[s].process(in) * sp.ildR_lin;
+                float xl = (useDelayL ? delaysL[s].process(in) : in) * sp.ildL_lin;
+                float xr = (useDelayR ? delaysR[s].process(in) : in) * sp.ildR_lin;
                 xl = pinnaL[s].process(xl);
                 xr = pinnaR[s].process(xr);
                 outL[i] += xl;
