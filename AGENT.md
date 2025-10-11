@@ -1,25 +1,43 @@
 
 # AGENT.md — Istruzioni per Assistenti (Codex/AI)
 
-**Obiettivo:** mantenere e migliorare `afx.binaural~`, un external Max che esegue binauralizzazione sintetica (no BRIR) con GPU Apple Silicon.
+**Obiettivo:** mantenere e migliorare `afx.binaural~`, un external Max che esegue binauralizzazione sintetica (no BRIR) su CPU/GPU (Metal).
 
 ## Principi
-- Non introdurre dipendenze pesanti. Il core deve rimanere C++17 + Metal, compatibile con Max SDK.
-- Preservare l'API esterna (messaggi/attributi) documentata in `docs/API.md`.
-- Mantenere la separazione: `max/` (glue), `engine/` (orchestrazione), `dsp/` (filtri e modelli), `metal/` (kernel), `util/` (infra).
+- Evita dipendenze pesanti; core C++17 + Metal; compatibile con Max SDK.
+- Mantieni l'API documentata in `docs/API.md` stabile.
+- Separa chiaramente: `max/` (glue), `engine/` (orchestrazione), `dsp/` (filtri e matematica), `metal/` (kernel), `util/` (infra).
 
-## Attività comuni
-- **DSP**: completare `SynthHRTF.hpp` con formule ITD/ILD, head-shadow, e pinna notch mapping.
-- **GPU**: estendere `binaural_kernels.metal` per N sorgenti × blocco, stato per biquad, ritardo frazionario.
-- **Scheduler**: batching in `GpuBinauralEngine` con ring buffer lock-free.
-- **Testing**: ampliare `tests/offline_synth.cpp` con golden references (CPU vs GPU).
+## Attività tipiche
+- **DSP**: ITD/ILD/head-shadow, pinna (notches) e conversione in biquad.
+- **GPU**: kernel Metal (DF‑II T + ritardo frazionario) e scheduling batched.
+- **Scheduler**: ring buffers lock‑free; param update per blocco.
+- **Testing**: CPU↔GPU parity; performance e glitch‑free.
 
 ## Regole di qualità
-- Copertura test per `dsp/` ≥ 80%.
-- No regressioni di latenza: blocco audio predefinito 128/256; evitare allocazioni in real-time.
-- Documenta *ogni* nuova formula o tabella in `docs/MATH.md` / `docs/PARAMS.md`.
+- Test per `dsp/` con copertura adeguata (≥ 80% consigliata).
+- Niente allocazioni nel perform; blocchi 128/256 testati a 48 kHz.
+- Documenta formule e LUT in `docs/MATH.md` / `docs/PARAMS.md`.
 
-## Come proporre cambi
-1. Apri una branch `feature/<nome>`.
-2. Aggiungi/aggiorna doc in `/docs` e esempi in `/examples`.
-3. Aggiorna `CHANGELOG.md` (se presente) e `README.md` se l'API cambia.
+---
+## Workflow operativo (OBBLIGATORIO)
+
+1. **Consulta `ROADMAP.md`** prima di iniziare; identifica i task (`T01`..`T12`) che tocchi.
+2. **Per ogni commit** (o PR):
+   - Includi nel **titolo** l’ID task: es. `feat: [T06] init Metal Impl`.
+   - **Aggiorna `COMMIT_LOG.md`** aggiungendo una voce con:
+     - Data, autore, **hash** del commit
+     - Task toccati (`[Txx]`)
+     - Cosa è stato fatto (breve)
+     - **Test eseguiti** (unit/integr./parity) e risultati
+     - **QA**: criteri minimi soddisfatti? (sì/no) + note
+     - Stato (in corso/chiuso). Se chiudi un task, scrivi **“Task closed: Txx”**.
+3. Se modifichi formule/LUT, aggiorna **`docs/MATH.md`** o **`docs/PARAMS.md`** nello stesso branch.
+4. Se l’API cambia, aggiorna **`docs/API.md`** e `README.md` nello stesso commit/PR.
+5. Nessun commit “magico”: la storia deve permettere di ricostruire test e QA eseguiti.
+
+---
+## Riferimenti
+- **Roadmap**: vedi `ROADMAP.md`.
+- **Test offline**: `tests/offline_synth.cpp` (CPU) e harness GPU (quando disponibile).
+- **CI**: `.github/workflows/macos-build.yml` (build macOS).
