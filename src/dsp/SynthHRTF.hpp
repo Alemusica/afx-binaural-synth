@@ -25,11 +25,14 @@ inline void computeITD(float sr, float head_radius_m, float az_deg, float& itdL,
 // ILD/head-shadow semplice: fattore di guadagno funzione di azimut
 inline void computeILD(float az_deg, float& gL, float& gR) {
     float az = deg2rad(az_deg);
-    // modello minimale: più guadagno lato ipsilaterale, attenuazione controlaterale
-    float k = 0.3f; // profondità
-    float base = 1.0f;
-    gL = base + k * std::cos(az); // L più forte per az~180°
-    gR = base + k * std::cos(-az);
+    // Modello sinusoidale minimale: l'ILD varia con sin(az) così da favorire
+    // l'orecchio ipsilaterale. Il guadagno risultante resta nel range
+    // [base-depth, base+depth] = [0.7, 1.3].
+    constexpr float depth = 0.3f;
+    constexpr float base = 1.0f;
+    float delta = depth * std::sin(az);
+    gL = base - delta;
+    gR = base + delta;
 }
 
 // Placeholder pinna: mappa elevazione->3 notches con Q costante

@@ -3,6 +3,7 @@
 #include <vector>
 #include <cmath>
 #include "../src/engine/CpuBinauralEngine.hpp"
+#include "../src/dsp/SynthHRTF.hpp"
 
 namespace {
 
@@ -47,6 +48,13 @@ int main() {
     eng.setHeadRadius(0.088f);
     SourcePose p; p.az_deg = 60.f; p.el_deg = 20.f; p.dist_m = 1.0f;
     eng.setPose(0, p);
+
+    SynthParams sp{};
+    buildSynthParams(sr, 0.088f, p, sp);
+    if (std::fabs(sp.ildL_lin - sp.ildR_lin) < 1e-5f) {
+        std::fprintf(stderr, "ILD identici per azimut non nullo.\n");
+        return 1;
+    }
 
     std::vector<float> in(N, 0.0f), L(N), R(N);
     in[0] = 1.0f; // impulso per misurare i tempi di arrivo
