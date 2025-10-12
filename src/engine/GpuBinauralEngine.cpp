@@ -66,9 +66,9 @@ void GpuBinauralEngine::process(const float** inputs, int nsources, float* outL,
             pinnaR[s].s[k].a1 = sp.right.a1[k];
             pinnaR[s].s[k].a2 = sp.right.a2[k];
         }
-        constexpr float kBaseDelay = 3.0f;
-        float delayL = kBaseDelay + std::max(sp.itdL, 0.0f);
-        float delayR = kBaseDelay + std::max(sp.itdR, 0.0f);
+        constexpr float kBaseDelay = 3.0f; // mantiene ritardi totali positivi
+        float delayL = kBaseDelay + sp.itdL;
+        float delayR = kBaseDelay + sp.itdR;
         constexpr float kDelayUpdateThreshold = 1e-4f;
         if (!std::isfinite(lastDelayL[s]) || std::fabs(delayL - lastDelayL[s]) > kDelayUpdateThreshold) {
             delaysL[s].setDelay(delayL);

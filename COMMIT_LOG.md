@@ -74,3 +74,14 @@ Annota qui ogni commit/PR rilevante secondo il workflow in AGENT.md.
     - Glitch-free (y/n): n/d (offline harness)
     - Note: GPU ancora fallback CPU; monitorare durante porting Metal.
   - Stato: in corso
+- Data: 2025-10-12
+  - Autore: ChatGPT
+  - Commit: <pending>
+  - Task: [T01, T09]
+  - Descrizione: Corretto il segno dell'ITD per anticipare l'orecchio ipsilaterale, rimossi i clamp sui ritardi relativi e ampliati i test offline con casi speculari; documentata la convenzione del segno.
+  - Test eseguiti:
+    - Integrazione: `make test` (pass)
+  - QA:
+    - Glitch-free (y/n): n/d (offline harness)
+    - Note: controllare anche percorso GPU reale quando disponibile.
+  - Stato: in corso

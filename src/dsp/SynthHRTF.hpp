@@ -16,10 +16,11 @@ inline void computeITD(float sr, float head_radius_m, float az_deg, float& itdL,
     float c = kSpeedOfSound;
     float a = head_radius_m;
     float tau = (a / c) * (az + std::sin(az)); // s
-    // segno: positiva verso ear destro per az>0
     float samples = tau * sr;
-    itdL = -samples * 0.5f;
-    itdR =  samples * 0.5f;
+    // Consegna ritardi additivi: ipsilaterale più corto, controlaterale più lungo.
+    float half = 0.5f * samples;
+    itdL = half;
+    itdR = -half;
 }
 
 // ILD/head-shadow semplice: fattore di guadagno funzione di azimut
