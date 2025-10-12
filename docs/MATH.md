@@ -4,6 +4,13 @@
 \[ \tau(\theta) = \frac{a}{c}\left(\theta + \sin\theta\right) \]
 Campioni: \( n = \tau \cdot f_s \). Applicato come ritardo frazionario Thiran.
 
+Convenzione del segno: \(\theta>0\) (fonte a destra) produce \(\tau>0\), ovvero l'orecchio controlaterale (sinistro) è più lento di \(\tau\) rispetto a quello ipsilaterale (destro).
+In termini di ritardi additivi per i due canali usiamo:
+\[
+ D_L = +\tfrac{1}{2} n, \qquad D_R = -\tfrac{1}{2} n,
+\]
+così l'orecchio ipsilaterale riceve un ritardo più corto (anticipa) e quello controlaterale uno più lungo.
+
 ## Ritardo frazionario (Thiran, ordine 3)
 Usiamo un all-pass di ordine 3 che approssima una group delay piatta vicino a DC.
 Definiamo il ritardo desiderato per ear come \(D_{tot}\) in campioni e poniamo:

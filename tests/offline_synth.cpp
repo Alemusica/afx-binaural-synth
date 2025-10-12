@@ -47,46 +47,76 @@ int main() {
     CpuBinauralEngine eng(4);
     eng.prepare(sr, N);
     eng.setHeadRadius(0.088f);
-    SourcePose p; p.az_deg = 60.f; p.el_deg = 20.f; p.dist_m = 1.0f;
-    eng.setPose(0, p);
+    SourcePose poseTemplate; poseTemplate.el_deg = 20.f; poseTemplate.dist_m = 1.0f;
 
-    SynthParams sp{};
-    buildSynthParams(sr, 0.088f, p, sp);
-    if (std::fabs(sp.ildL_lin - sp.ildR_lin) < 1e-5f) {
-        std::fprintf(stderr, "ILD identici per azimut non nullo.\n");
+    auto checkImpulseLead = [&](float azimuth, bool expectRightLead) -> bool {
+        SourcePose pose = poseTemplate;
+        pose.az_deg = azimuth;
+        eng.setPose(0, pose);
+
+        SynthParams params{};
+        buildSynthParams(sr, 0.088f, pose, params);
+        if (std::fabs(params.ildL_lin - params.ildR_lin) < 1e-5f) {
+            std::fprintf(stderr, "ILD identici per azimut %.1f°.\n", azimuth);
+            return false;
+        }
+
+        std::vector<float> in(N, 0.0f), L(N), R(N);
+        in[0] = 1.0f; // impulso per misurare i tempi di arrivo
+        const float* ins[1] = { in.data() };
+        eng.process(ins, 1, L.data(), R.data(), N);
+
+        int firstL = firstNonZeroIndex(L, 1e-4f);
+        int firstR = firstNonZeroIndex(R, 1e-4f);
+        if (firstL < 0 || firstR < 0) {
+            std::fprintf(stderr, "Segnale non rilevato all'uscita (az=%.1f°).\n", azimuth);
+            return false;
+        }
+        if (firstL == firstR) {
+            std::fprintf(stderr, "I tempi di arrivo coincidono inaspettatamente (az=%.1f°).\n", azimuth);
+            return false;
+        }
+
+        int lag = estimateLag(L, R, 64);
+        if (expectRightLead) {
+            if (firstR > firstL) {
+                std::fprintf(stderr, "Il canale destro non anticipa (az=%.1f°).\n", azimuth);
+                return false;
+            }
+            if (lag >= 0) {
+                std::fprintf(stderr, "La correlazione non mostra lag negativo per R (lag=%d, az=%.1f°).\n", lag, azimuth);
+                return false;
+            }
+        } else {
+            if (firstL > firstR) {
+                std::fprintf(stderr, "Il canale sinistro non anticipa (az=%.1f°).\n", azimuth);
+                return false;
+            }
+            if (lag <= 0) {
+                std::fprintf(stderr, "La correlazione non mostra lag positivo per R (lag=%d, az=%.1f°).\n", lag, azimuth);
+                return false;
+            }
+        }
+
+        std::printf("az=%5.1f° -> primo L=%d, primo R=%d, lag=%d\n", azimuth, firstL, firstR, lag);
+        return true;
+    };
+
+    if (!checkImpulseLead(60.f, true)) {
         return 1;
     }
-
-    std::vector<float> in(N, 0.0f), L(N), R(N);
-    in[0] = 1.0f; // impulso per misurare i tempi di arrivo
-    const float* ins[1] = { in.data() };
-    eng.process(ins, 1, L.data(), R.data(), N);
-
-    int firstL = firstNonZeroIndex(L, 1e-4f);
-    int firstR = firstNonZeroIndex(R, 1e-4f);
-    if (firstL < 0 || firstR < 0) {
-        std::fprintf(stderr, "Segnale non rilevato all'uscita.\n");
+    if (!checkImpulseLead(-60.f, false)) {
         return 1;
     }
-    if (firstL == firstR) {
-        std::fprintf(stderr, "I tempi di arrivo iniziali coincidono inaspettatamente.\n");
-        return 1;
-    }
-
-    int lag = estimateLag(L, R, 64);
-    if (lag <= 0) {
-        std::fprintf(stderr, "La correlazione massima non evidenzia un ritardo destro positivo (lag=%d).\n", lag);
-        return 1;
-    }
-
-    std::printf("Primo campione L=%d, R=%d, lag stimato=%d\n", firstL, firstR, lag);
 
     // Test di continuità dell'ampiezza su blocchi consecutivi
     const int blockSize = 256;
     const int numBlocks = 5;
     const int warmupBlocks = 2;
     eng.prepare(sr, blockSize);
-    eng.setPose(0, p);
+    SourcePose steadyPose = poseTemplate;
+    steadyPose.az_deg = 30.f;
+    eng.setPose(0, steadyPose);
     std::vector<float> blockIn(blockSize), blockOutL(blockSize), blockOutR(blockSize);
     std::vector<float> peakL(numBlocks, 0.0f), peakR(numBlocks, 0.0f);
     const float frequency = 440.0f;
