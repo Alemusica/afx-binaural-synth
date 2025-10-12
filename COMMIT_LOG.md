@@ -29,3 +29,14 @@ Annota qui ogni commit/PR rilevante secondo il workflow in AGENT.md.
   - Test eseguiti: N/A
   - QA: N/A
   - Stato: in corso
+- Data: 2025-10-12
+  - Autore: ChatGPT
+  - Commit: e133be2
+  - Task: [T01]
+  - Descrizione: Implementato Thiran N=3 DF-II-T con ring buffer per parte intera e documentazione aggiornata.
+  - Test eseguiti:
+    - Build: `cmake -S . -B build` (fallito: cc1obj non disponibile in container)
+  - QA:
+    - Glitch-free (y/n): n/d
+    - Note: Fallback GPU ancora CPU-side; necessaria integrazione futura.
+  - Stato: in corso
