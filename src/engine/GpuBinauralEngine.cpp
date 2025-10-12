@@ -34,7 +34,7 @@ void GpuBinauralEngine::process(const float** inputs, int nsources, float* outL,
     for (int i=0;i<n;i++){ outL[i]=0.f; outR[i]=0.f; }
 
     BiquadCascade pinnaL, pinnaR;
-    FractionalDelay3 dL, dR;
+    ThiranDelay dL, dR;
 
     for (int s=0; s<nsources; ++s) {
         SynthParams sp{};

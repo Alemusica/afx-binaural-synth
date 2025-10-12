@@ -40,3 +40,14 @@ Annota qui ogni commit/PR rilevante secondo il workflow in AGENT.md.
     - Glitch-free (y/n): n/d
     - Note: Fallback GPU ancora CPU-side; necessaria integrazione futura.
   - Stato: in corso
+- Data: 2025-10-12
+  - Autore: ChatGPT
+  - Commit: TBD
+  - Task: [T01]
+  - Descrizione: Rifattorizzato ritardo Thiran con wrapper `ThiranDelay`, test di group delay e Makefile per harness offline.
+  - Test eseguiti:
+    - Unit: `make test` (pass)
+  - QA:
+    - Glitch-free (y/n): n/d (offline harness)
+    - Note: GPU ancora stub CPU; verificare integrazione futura.
+  - Stato: in corso
