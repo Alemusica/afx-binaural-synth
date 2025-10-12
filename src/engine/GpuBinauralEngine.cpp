@@ -34,7 +34,7 @@ void GpuBinauralEngine::process(const float** inputs, int nsources, float* outL,
     for (int i=0;i<n;i++){ outL[i]=0.f; outR[i]=0.f; }
 
     BiquadCascade pinnaL, pinnaR;
-    ThiranDelay3 dL, dR;
+    FractionalDelay3 dL, dR;
 
     for (int s=0; s<nsources; ++s) {
         SynthParams sp{};
@@ -56,23 +56,18 @@ void GpuBinauralEngine::process(const float** inputs, int nsources, float* outL,
             pinnaR.s[k].a1 = sp.right.a1[k];
             pinnaR.s[k].a2 = sp.right.a2[k];
         }
-        float delayL = std::max(sp.itdL, 0.0f);
-        float delayR = std::max(sp.itdR, 0.0f);
-        bool useDelayL = delayL > 0.0f;
-        bool useDelayR = delayR > 0.0f;
+        constexpr float kBaseDelay = 3.0f;
+        float delayL = kBaseDelay + std::max(sp.itdL, 0.0f);
+        float delayR = kBaseDelay + std::max(sp.itdR, 0.0f);
         dL.reset();
         dR.reset();
-        if (useDelayL) {
-            dL.setDelay(delayL);
-        }
-        if (useDelayR) {
-            dR.setDelay(delayR);
-        }
+        dL.setDelay(delayL);
+        dR.setDelay(delayR);
         const float* x = inputs[s];
         for (int i=0;i<n;i++) {
             float in = x[i];
-            float delayedL = useDelayL ? dL.process(in) : in;
-            float delayedR = useDelayR ? dR.process(in) : in;
+            float delayedL = dL.process(in);
+            float delayedR = dR.process(in);
             float xl = pinnaL.process(delayedL) * sp.ildL_lin;
             float xr = pinnaR.process(delayedR) * sp.ildR_lin;
             outL[i] += xl;

@@ -54,25 +54,16 @@ struct CpuBinauralEngine {
                 pinnaR[s].s[k].a2 = sp.right.a2[k];
             }
             // approssima ITD con Thiran per ear mantenendo il segno del ritardo relativo
-            float delayL = std::max(sp.itdL, 0.0f);
-            float delayR = std::max(sp.itdR, 0.0f);
-            bool useDelayL = delayL > 0.0f;
-            bool useDelayR = delayR > 0.0f;
-            if (useDelayL) {
-                delaysL[s].setDelay(delayL);
-            } else {
-                delaysL[s].reset();
-            }
-            if (useDelayR) {
-                delaysR[s].setDelay(delayR);
-            } else {
-                delaysR[s].reset();
-            }
+            constexpr float kBaseDelay = 3.0f;
+            float delayL = kBaseDelay + std::max(sp.itdL, 0.0f);
+            float delayR = kBaseDelay + std::max(sp.itdR, 0.0f);
+            delaysL[s].setDelay(delayL);
+            delaysR[s].setDelay(delayR);
             const float* x = inputs[s];
             for (int i=0;i<n;i++) {
                 float in = x[i];
-                float xl = (useDelayL ? delaysL[s].process(in) : in) * sp.ildL_lin;
-                float xr = (useDelayR ? delaysR[s].process(in) : in) * sp.ildR_lin;
+                float xl = delaysL[s].process(in) * sp.ildL_lin;
+                float xr = delaysR[s].process(in) * sp.ildR_lin;
                 xl = pinnaL[s].process(xl);
                 xr = pinnaR[s].process(xr);
                 outL[i] += xl;
@@ -89,7 +80,7 @@ private:
     float headRadius{kHeadRadiusDefault};
 
     std::vector<SourcePose> poses;
-    std::vector<ThiranDelay3> delaysL, delaysR;
+    std::vector<FractionalDelay3> delaysL, delaysR;
     std::vector<BiquadCascade> pinnaL, pinnaR;
 };
 
