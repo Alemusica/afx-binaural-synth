@@ -1,6 +1,7 @@
 
 #include <cstdio>
 #include <vector>
+#include <algorithm>
 #include <cmath>
 #include "../src/engine/CpuBinauralEngine.hpp"
 #include "../src/dsp/SynthHRTF.hpp"
@@ -79,5 +80,49 @@ int main() {
     }
 
     std::printf("Primo campione L=%d, R=%d, lag stimato=%d\n", firstL, firstR, lag);
+
+    // Test di continuità dell'ampiezza su blocchi consecutivi
+    const int blockSize = 256;
+    const int numBlocks = 5;
+    const int warmupBlocks = 2;
+    eng.prepare(sr, blockSize);
+    eng.setPose(0, p);
+    std::vector<float> blockIn(blockSize), blockOutL(blockSize), blockOutR(blockSize);
+    std::vector<float> peakL(numBlocks, 0.0f), peakR(numBlocks, 0.0f);
+    const float frequency = 440.0f;
+    const float twoPi = 6.28318530717958647692f;
+    float phase = 0.0f;
+    const float phaseInc = twoPi * frequency / static_cast<float>(sr);
+    for (int b = 0; b < numBlocks; ++b) {
+        for (int i = 0; i < blockSize; ++i) {
+            blockIn[i] = std::sin(phase);
+            phase += phaseInc;
+            if (phase >= twoPi) phase -= twoPi;
+        }
+        const float* blockPtr[1] = { blockIn.data() };
+        eng.process(blockPtr, 1, blockOutL.data(), blockOutR.data(), blockSize);
+        float maxAbsL = 0.0f;
+        float maxAbsR = 0.0f;
+        for (int i = 0; i < blockSize; ++i) {
+            maxAbsL = std::max(maxAbsL, std::fabs(blockOutL[i]));
+            maxAbsR = std::max(maxAbsR, std::fabs(blockOutR[i]));
+        }
+        peakL[b] = maxAbsL;
+        peakR[b] = maxAbsR;
+    }
+    const float amplitudeTolerance = 5e-3f;
+    for (int b = warmupBlocks + 1; b < numBlocks; ++b) {
+        if (std::fabs(peakL[b] - peakL[b - 1]) > amplitudeTolerance) {
+            std::fprintf(stderr, "Ampiezza instabile L sui blocchi %d/%d: %.6f vs %.6f\n",
+                         b - 1, b, peakL[b - 1], peakL[b]);
+            return 1;
+        }
+        if (std::fabs(peakR[b] - peakR[b - 1]) > amplitudeTolerance) {
+            std::fprintf(stderr, "Ampiezza instabile R sui blocchi %d/%d: %.6f vs %.6f\n",
+                         b - 1, b, peakR[b - 1], peakR[b]);
+            return 1;
+        }
+    }
+
     return 0;
 }

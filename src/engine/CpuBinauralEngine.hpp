@@ -2,6 +2,8 @@
 #pragma once
 #include <vector>
 #include <algorithm>
+#include <cmath>
+#include <limits>
 #include "../dsp/Biquad.hpp"
 #include "../dsp/FractionalDelay.hpp"
 #include "../dsp/SynthHRTF.hpp"
@@ -12,7 +14,9 @@ namespace afx {
 struct CpuBinauralEngine {
     explicit CpuBinauralEngine(int max_sources=16)
     : poses(max_sources), delaysL(max_sources), delaysR(max_sources),
-      pinnaL(max_sources), pinnaR(max_sources) {}
+      pinnaL(max_sources), pinnaR(max_sources),
+      lastDelayL(max_sources, std::numeric_limits<float>::quiet_NaN()),
+      lastDelayR(max_sources, std::numeric_limits<float>::quiet_NaN()) {}
 
     void prepare(double sr, int block) {
         sampleRate = (float)sr;
@@ -21,6 +25,8 @@ struct CpuBinauralEngine {
         for (auto& d: delaysR) d.reset();
         for (auto& p: pinnaL) p.reset();
         for (auto& p: pinnaR) p.reset();
+        std::fill(lastDelayL.begin(), lastDelayL.end(), std::numeric_limits<float>::quiet_NaN());
+        std::fill(lastDelayR.begin(), lastDelayR.end(), std::numeric_limits<float>::quiet_NaN());
     }
 
     void setHeadRadius(float r) { headRadius = r; }
@@ -57,8 +63,15 @@ struct CpuBinauralEngine {
             constexpr float kBaseDelay = 3.0f;
             float delayL = kBaseDelay + std::max(sp.itdL, 0.0f);
             float delayR = kBaseDelay + std::max(sp.itdR, 0.0f);
-            delaysL[s].setDelay(delayL);
-            delaysR[s].setDelay(delayR);
+            constexpr float kDelayUpdateThreshold = 1e-4f;
+            if (!std::isfinite(lastDelayL[s]) || std::fabs(delayL - lastDelayL[s]) > kDelayUpdateThreshold) {
+                delaysL[s].setDelay(delayL);
+                lastDelayL[s] = delayL;
+            }
+            if (!std::isfinite(lastDelayR[s]) || std::fabs(delayR - lastDelayR[s]) > kDelayUpdateThreshold) {
+                delaysR[s].setDelay(delayR);
+                lastDelayR[s] = delayR;
+            }
             const float* x = inputs[s];
             for (int i=0;i<n;i++) {
                 float in = x[i];
@@ -82,6 +95,7 @@ private:
     std::vector<SourcePose> poses;
     std::vector<ThiranDelay> delaysL, delaysR;
     std::vector<BiquadCascade> pinnaL, pinnaR;
+    std::vector<float> lastDelayL, lastDelayR;
 };
 
 } // namespace afx

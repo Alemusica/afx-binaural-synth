@@ -2,7 +2,10 @@
 #pragma once
 #include <vector>
 #include <string>
+#include <limits>
 #include "../dsp/SynthHRTF.hpp"
+#include "../dsp/FractionalDelay.hpp"
+#include "../dsp/Biquad.hpp"
 
 namespace afx {
 
@@ -32,6 +35,9 @@ private:
     Impl* impl{nullptr};
 
     std::vector<SourcePose> poses;
+    std::vector<ThiranDelay> delaysL, delaysR;
+    std::vector<BiquadCascade> pinnaL, pinnaR;
+    std::vector<float> lastDelayL, lastDelayR;
 };
 
 } // namespace afx
