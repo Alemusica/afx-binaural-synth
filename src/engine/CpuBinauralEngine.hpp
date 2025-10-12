@@ -80,7 +80,7 @@ private:
     float headRadius{kHeadRadiusDefault};
 
     std::vector<SourcePose> poses;
-    std::vector<FractionalDelay3> delaysL, delaysR;
+    std::vector<ThiranDelay> delaysL, delaysR;
     std::vector<BiquadCascade> pinnaL, pinnaR;
 };
 

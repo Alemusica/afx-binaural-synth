@@ -5,16 +5,17 @@
 
 namespace afx {
 
-// Thiran all-pass di ordine 3, realizzazione diretta (DF-II Transposed).
-// Modella H(z) = z^{-3} A(z^{-1}) / A(z), con A(z)=1 + a1 z^{-1} + a2 z^{-2} + a3 z^{-3}
+// -----------------------------
+// Allpass Thiran ordine 3 (DF-II trasposto)
+// H(z) = z^{-3} * A(z^{-1}) / A(z)
+// A(z) = 1 + a1 z^{-1} + a2 z^{-2} + a3 z^{-3}
+// -----------------------------
 struct ThiranAP3 {
-    float mu{0.5f};          // frazione in [0,1)
+    float mu{0.5f};
     float a1{0.f}, a2{0.f}, a3{0.f};
-    // stati DF-II-T
-    float s1{0.f}, s2{0.f}, s3{0.f};
+    float s1{0.f}, s2{0.f}, s3{0.f}; // stati DF-II-T
 
     void setMu(float mu_) {
-        // clamp e formule chiuse (J.O. Smith, N=3 con Δ = 3 + mu)
         mu = std::clamp(mu_, 0.0f, 0.9999f);
         const float x = mu;
         a1 = -3.f * x / (x + 4.f);
@@ -29,56 +30,73 @@ struct ThiranAP3 {
         s1       = b1 * x - a1 * y + s2;
         s2       = b2 * x - a2 * y + s3;
         s3       = b3 * x - a3 * y;
-        return y; // include z^{-3} interno
+        return y; // include z^{-3}
     }
 
     void reset() { s1 = s2 = s3 = 0.f; }
 };
 
-// Ritardo frazionario con ordine N=3: parte intera gestita da ring buffer, parte frazionaria da ThiranAP3.
-struct FractionalDelay3 {
-    void setDelay(float totalDelay) {
-        const float d = std::max(totalDelay, 0.0f);
-        const float M = std::floor(d);
-        const float frac = d - M; // μ ∈ [0,1)
-        int newL = static_cast<int>(M) - 3;
-        if (newL < 0) {
-            newL = 0;
+// Ritardo intero semplice (circular buffer)
+struct IntDelay {
+    std::vector<float> buf;
+    size_t w{0};
+
+    void setLen(int L) {
+        if (L < 0) L = 0;
+        const size_t target = L > 0 ? static_cast<size_t>(L) : size_t{0};
+        if (buf.size() != target) {
+            buf.assign(target, 0.f);
+            w = 0;
+        } else if (w >= buf.size()) {
+            w = 0;
         }
-        if (newL != L || ring.empty()) {
-            L = newL;
-            ring.assign(static_cast<size_t>(L > 0 ? L : 0), 0.0f);
-            writeIndex = 0;
-        }
-        ap.setMu(frac);
     }
 
     inline float process(float x) {
-        float delayed = x;
-        if (L > 0) {
-            if (ring.empty()) {
-                ring.assign(static_cast<size_t>(L), 0.0f);
-                writeIndex = 0;
-            }
-            float y = ring[writeIndex];
-            ring[writeIndex] = x;
-            writeIndex = (writeIndex + 1) % ring.size();
-            delayed = y;
-        }
-        return ap.process(delayed);
+        if (buf.empty()) return x;
+        float y = buf[w];
+        buf[w] = x;
+        ++w;
+        if (w >= buf.size()) w = 0;
+        return y;
     }
 
     void reset() {
-        ap.reset();
-        std::fill(ring.begin(), ring.end(), 0.0f);
-        writeIndex = 0;
+        std::fill(buf.begin(), buf.end(), 0.f);
+        w = 0;
     }
 
+    int len() const { return static_cast<int>(buf.size()); }
+};
+
+// Wrapper: D_tot = M + mu, parte intera gestita da IntDelay
+struct ThiranDelay {
+    void setDelay(float D) {
+        Dtot = std::max(0.f, D);
+        const float target = Dtot;
+        const int   M  = static_cast<int>(std::floor(target));
+        const float mu = target - static_cast<float>(M); // [0,1)
+        int L = M - 3; // parte intera residua (>=0)
+        if (L < 0) L = 0;
+        intd.setLen(L);
+        ap3.setMu(mu);
+    }
+
+    inline float process(float x) {
+        return ap3.process(intd.process(x));
+    }
+
+    void reset() {
+        intd.reset();
+        ap3.reset();
+    }
+
+    float delay() const { return Dtot; }
+
 private:
-    ThiranAP3 ap{};
-    std::vector<float> ring;
-    size_t writeIndex{0};
-    int L{0};
+    IntDelay  intd;
+    ThiranAP3 ap3;
+    float     Dtot{0.f};
 };
 
 } // namespace afx
