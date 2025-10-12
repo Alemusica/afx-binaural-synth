@@ -1,28 +1,29 @@
-
 # Matematica (sintesi HRTF)
 
 ## ITD (Woodworth, sfera rigida)
-\\[ \\tau(\\theta) = \\frac{a}{c}\\left(\\theta + \\sin\\theta\\right) \\]
-Campioni: \\( n = \\tau \\cdot f_s \\). Applicato come ritardo frazionario Thiran.
+\[ \tau(\theta) = \frac{a}{c}\left(\theta + \sin\theta\right) \]
+Campioni: \( n = \tau \cdot f_s \). Applicato come ritardo frazionario Thiran.
 
 ## Ritardo frazionario (Thiran, ordine 3)
-Usiamo un all-pass di ordine 3 con risposta in fase quasi-lineare in banda bassa.
-Dato un ritardo totale desiderato \( D_{\text{tot}} \) in campioni:
-
-1. Decomponiamo \( D_{\text{tot}} = M + \mu \) con \( M = \lfloor D_{\text{tot}} \rfloor \) e \( \mu \in [0,1) \).
-2. Applichiamo un ritardo intero \( L = \max(M - 3, 0) \) tramite buffer circolare.
-3. Configuriamo l'all-pass Thiran con \( \Delta = 3 + \mu \).
-
-Per \(N = 3\) i coefficienti di \(A(z) = 1 + a_1 z^{-1} + a_2 z^{-2} + a_3 z^{-3}\) sono:
+Usiamo un all-pass di ordine 3 che approssima una group delay piatta vicino a DC.
+Definiamo il ritardo desiderato per ear come \(D_{tot}\) in campioni e poniamo:
 \[
- a_1 = -\frac{3\mu}{\mu + 4},\qquad
- a_2 = \frac{3\mu(\mu + 1)}{(\mu + 4)(\mu + 5)},\qquad
- a_3 = -\frac{\mu(\mu + 1)(\mu + 2)}{(\mu + 4)(\mu + 5)(\mu + 6)}.
+ D_{tot} = M + \mu, \quad M = \lfloor D_{tot} \rfloor, \quad \mu \in [0,1).
 \]
-La realizzazione usa una struttura DF-II trasposta; lo sfasamento \( z^{-3} \) è incorporato nell'all-pass.
+Realizziamo:
+1) ritardo intero di lunghezza \(L = \max(M-3, 0)\);
+2) allpass Thiran con \(\Delta = 3 + \mu\).
+
+Per \(N=3\), i coefficienti di \(A(z)=1+a_1 z^{-1}+a_2 z^{-2}+a_3 z^{-3}\) sono:
+\[
+ a_1 = -\frac{3\mu}{\mu+4},\qquad
+ a_2 = \frac{3\mu(\mu+1)}{(\mu+4)(\mu+5)},\qquad
+ a_3 = -\frac{\mu(\mu+1)(\mu+2)}{(\mu+4)(\mu+5)(\mu+6)}.
+\]
+L'allpass `\mu` è configurato in forma DF-II trasposta e include lo shift \(z^{-3}\).
 
 ## ILD (head shadow semplificato)
-Guadagno direzione-dipendente: \\( g_L = 1 + k\\cos\\theta \\), \\( g_R = 1 + k\\cos(-\\theta) \\).
+Guadagno direzione-dipendente: \( g_L = 1 + k\cos\theta \), \( g_R = 1 + k\cos(-\theta) \).
 (Sostituire con modello migliore se disponibile.)
 
 ## Pinna
