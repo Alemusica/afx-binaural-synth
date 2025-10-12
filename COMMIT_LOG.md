@@ -51,3 +51,15 @@ Annota qui ogni commit/PR rilevante secondo il workflow in AGENT.md.
     - Glitch-free (y/n): n/d (offline harness)
     - Note: GPU ancora stub CPU; verificare integrazione futura.
   - Stato: in corso
+
+- Data: 2025-10-12
+  Autore: <AGENT/Codex>
+  Commit: e6b592ed3a0952f9a92499afdc8ba6f0020390af
+  Task: [T01]
+  Descrizione: Implementato ThiranAP3 ordine 3 con buffer intero opzionale; documentazione formule e test group delay.
+  Test eseguiti:
+    - Unit: make test (offline_synth + test_thiran_phase)
+  QA:
+    - Glitch-free: y (offline harness, ritardi positivi)
+    - Note: GPU path ancora usa CPU fallback
+  Stato: chiuso (Task closed: T01)
