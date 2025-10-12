@@ -63,3 +63,14 @@ Annota qui ogni commit/PR rilevante secondo il workflow in AGENT.md.
     - Glitch-free: y (offline harness, ritardi positivi)
     - Note: GPU path ancora usa CPU fallback
   Stato: chiuso (Task closed: T01)
+- Data: 2025-10-12
+  - Autore: ChatGPT
+  - Commit: 5d2fd7a9ea2e55c94d90f3cc699de95cc15ec238
+  - Task: [T01, T06]
+  - Descrizione: Preservata la storia nel ritardo Thiran e memoizzazione dei ritardi per CPU/GPU; aggiunto test di stabilità ampiezza.
+  - Test eseguiti:
+    - Integrazione: `make test` (pass)
+  - QA:
+    - Glitch-free (y/n): n/d (offline harness)
+    - Note: GPU ancora fallback CPU; monitorare durante porting Metal.
+  - Stato: in corso

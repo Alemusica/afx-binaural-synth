@@ -69,7 +69,24 @@ struct ThiranDelay {
         float mu = Dtot - (float)M;    // [0,1)
         int   L  = M - 3;              // parte intera residua (>=0)
         if (L < 0) L = 0;
-        intd.setLen(L);
+
+        const int oldLen = intd.len();
+        if (L != oldLen) {
+            const size_t newLen = static_cast<size_t>(L);
+            std::vector<float> newBuf(newLen, 0.f);
+            if (newLen > 0 && oldLen > 0) {
+                const size_t oldLenSz = static_cast<size_t>(oldLen);
+                const size_t copyCount = std::min(oldLenSz, newLen);
+                const size_t oldStart = oldLenSz > newLen ? (oldLenSz - newLen) : 0;
+                for (size_t i = 0; i < copyCount; ++i) {
+                    const size_t srcIndex = (static_cast<size_t>(intd.w) + oldStart + i) % oldLenSz;
+                    const size_t dstIndex = newLen > oldLenSz ? (newLen - copyCount + i) : i;
+                    newBuf[dstIndex] = intd.buf[srcIndex];
+                }
+            }
+            intd.buf = std::move(newBuf);
+            intd.w = 0;
+        }
         ap3.setMu(mu);
     }
     inline float process(float x) {
