@@ -12,11 +12,17 @@ build/test_thiran: tests/test_thiran_phase.cpp
 	@mkdir -p build
 	$(CXX) $(CXXFLAGS) $< -o $@ $(LDFLAGS)
 
-test: build/offline_synth build/test_thiran
+build/test_gpu_fallback: tests/test_gpu_fallback_continuity.cpp src/engine/GpuBinauralEngine.cpp
+	@mkdir -p build
+	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
+
+test: build/offline_synth build/test_thiran build/test_gpu_fallback
 	@echo "== offline_synth =="
 	@./build/offline_synth | head -n 8
 	@echo "== test_thiran =="
 	@./build/test_thiran
+	@echo "== test_gpu_fallback =="
+	@./build/test_gpu_fallback
 
 clean:
 	rm -rf build

@@ -37,6 +37,7 @@ private:
     std::vector<SourcePose> poses;
     std::vector<ThiranDelay> delaysL, delaysR;
     std::vector<BiquadCascade> pinnaL, pinnaR;
+    std::vector<EarCoeffs> lastEarL, lastEarR;
     std::vector<float> lastDelayL, lastDelayR;
 };
 

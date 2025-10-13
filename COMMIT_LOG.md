@@ -85,3 +85,14 @@ Annota qui ogni commit/PR rilevante secondo il workflow in AGENT.md.
     - Glitch-free (y/n): n/d (offline harness)
     - Note: controllare anche percorso GPU reale quando disponibile.
   - Stato: in corso
+- Data: 2025-10-12
+  - Autore: ChatGPT
+  - Commit: f0fe506e3035efd4b994b0801f6c25bffa4683cb
+  - Task: [T06, T09]
+  - Descrizione: Stati GPU fallback resi persistenti con aggiornamento coeff solo quando cambia e nuovo test di continuità multi-blocco.
+  - Test eseguiti:
+    - Integrazione: `make test` (pass)
+  - QA:
+    - Glitch-free (y/n): n/d (offline harness CPU fallback GPU)
+    - Note: Continuity harness GPU fallback aggiunto; verificare su Metal reale.
+  - Stato: in corso

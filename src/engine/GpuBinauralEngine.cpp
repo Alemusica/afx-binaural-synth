@@ -17,6 +17,7 @@ GpuBinauralEngine::GpuBinauralEngine(int max_sources)
 : poses(max_sources),
   delaysL(max_sources), delaysR(max_sources),
   pinnaL(max_sources), pinnaR(max_sources),
+  lastEarL(max_sources), lastEarR(max_sources),
   lastDelayL(max_sources, std::numeric_limits<float>::quiet_NaN()),
   lastDelayR(max_sources, std::numeric_limits<float>::quiet_NaN()) {
     // Inizializza risorse GPU (deferred per semplicità)
@@ -33,6 +34,8 @@ void GpuBinauralEngine::prepare(double sr, int block) {
     for (auto& d : delaysR) d.reset();
     for (auto& p : pinnaL) p.reset();
     for (auto& p : pinnaR) p.reset();
+    for (auto& e : lastEarL) e.nbiquad = -1;
+    for (auto& e : lastEarR) e.nbiquad = -1;
     std::fill(lastDelayL.begin(), lastDelayL.end(), std::numeric_limits<float>::quiet_NaN());
     std::fill(lastDelayR.begin(), lastDelayR.end(), std::numeric_limits<float>::quiet_NaN());
 }
@@ -49,23 +52,35 @@ void GpuBinauralEngine::process(const float** inputs, int nsources, float* outL,
     for (int s=0; s<nsources; ++s) {
         SynthParams sp{};
         buildSynthParams(sampleRate, headRadius, poses[s], sp);
-        // carica filtri
-        pinnaL[s].count = sp.left.nbiquad;
-        pinnaR[s].count = sp.right.nbiquad;
-        for (int k=0;k<sp.left.nbiquad;k++) {
-            pinnaL[s].s[k].b0 = sp.left.b0[k];
-            pinnaL[s].s[k].b1 = sp.left.b1[k];
-            pinnaL[s].s[k].b2 = sp.left.b2[k];
-            pinnaL[s].s[k].a1 = sp.left.a1[k];
-            pinnaL[s].s[k].a2 = sp.left.a2[k];
-        }
-        for (int k=0;k<sp.right.nbiquad;k++) {
-            pinnaR[s].s[k].b0 = sp.right.b0[k];
-            pinnaR[s].s[k].b1 = sp.right.b1[k];
-            pinnaR[s].s[k].b2 = sp.right.b2[k];
-            pinnaR[s].s[k].a1 = sp.right.a1[k];
-            pinnaR[s].s[k].a2 = sp.right.a2[k];
-        }
+        auto updateCascadeIfNeeded = [](const EarCoeffs& src, EarCoeffs& cache, BiquadCascade& cascade) {
+            constexpr float kCoeffThreshold = 1e-6f;
+            bool changed = cache.nbiquad != src.nbiquad;
+            if (!changed) {
+                for (int k = 0; k < src.nbiquad; ++k) {
+                    if (std::fabs(cache.b0[k] - src.b0[k]) > kCoeffThreshold ||
+                        std::fabs(cache.b1[k] - src.b1[k]) > kCoeffThreshold ||
+                        std::fabs(cache.b2[k] - src.b2[k]) > kCoeffThreshold ||
+                        std::fabs(cache.a1[k] - src.a1[k]) > kCoeffThreshold ||
+                        std::fabs(cache.a2[k] - src.a2[k]) > kCoeffThreshold) {
+                        changed = true;
+                        break;
+                    }
+                }
+            }
+            if (changed) {
+                cascade.count = src.nbiquad;
+                for (int k = 0; k < src.nbiquad; ++k) {
+                    cascade.s[k].b0 = src.b0[k];
+                    cascade.s[k].b1 = src.b1[k];
+                    cascade.s[k].b2 = src.b2[k];
+                    cascade.s[k].a1 = src.a1[k];
+                    cascade.s[k].a2 = src.a2[k];
+                }
+                cache = src;
+            }
+        };
+        updateCascadeIfNeeded(sp.left, lastEarL[s], pinnaL[s]);
+        updateCascadeIfNeeded(sp.right, lastEarR[s], pinnaR[s]);
         constexpr float kBaseDelay = 3.0f; // mantiene ritardi totali positivi
         float delayL = kBaseDelay + sp.itdL;
         float delayR = kBaseDelay + sp.itdR;
